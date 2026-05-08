@@ -11,7 +11,7 @@ use ratatui::{
 
 const HEADER_TITLES: [&str; 7] = [
     "Target IQN",
-    "Initiator IQN",
+    "Initiator",
     "Device",
     "Read Rate",
     "Write Rate",
@@ -90,16 +90,30 @@ fn draw_table(f: &mut Frame, app: &mut App, area: Rect) {
     let header_style = Style::default()
         .fg(Color::Yellow)
         .add_modifier(Modifier::BOLD);
+    let sort_style = Style::default()
+        .fg(Color::White)
+        .add_modifier(Modifier::BOLD);
     let selected_style = Style::default()
         .bg(Color::DarkGray)
         .add_modifier(Modifier::BOLD);
 
+    let sort_col = app.sort_col;
+    let sort_asc = app.sort_asc;
     let header_cells: Vec<Cell> = HEADER_TITLES
         .iter()
-        .map(|h| Cell::from(*h).style(header_style))
+        .enumerate()
+        .map(|(i, &h)| {
+            if i == sort_col {
+                let indicator = if sort_asc { " ▲" } else { " ▼" };
+                Cell::from(format!("{}{}", h, indicator)).style(sort_style)
+            } else {
+                Cell::from(h).style(header_style)
+            }
+        })
         .collect();
     let header = Row::new(header_cells).height(1).bottom_margin(0);
 
+    let initiator_hostname = app.initiator_hostname.clone();
     let rows: Vec<Row> = app
         .sessions
         .iter()
@@ -110,9 +124,13 @@ fn draw_table(f: &mut Frame, app: &mut App, area: Rect) {
                 .map(|l| abbreviate_device(&l.device))
                 .unwrap_or_else(|| String::from("—"));
 
+            let initiator = initiator_hostname
+                .as_deref()
+                .unwrap_or_else(|| s.initiator_iqn.as_str());
+
             let cells = vec![
                 Cell::from(abbreviate_iqn(&s.target_iqn)),
-                Cell::from(abbreviate_iqn(&s.initiator_iqn)),
+                Cell::from(initiator.to_string()),
                 Cell::from(device),
                 Cell::from(format_rate(s.read_rate)),
                 Cell::from(format_rate(s.write_rate)),
@@ -143,6 +161,7 @@ fn draw_footer(f: &mut Frame, area: Rect) {
     let keys = vec![
         ("↑/↓", "navigate"),
         ("g/G", "top/bottom"),
+        ("1-7", "sort column"),
         ("?", "help"),
         ("q", "quit"),
     ];
@@ -185,6 +204,10 @@ fn draw_help(f: &mut Frame, area: Rect) {
         Line::from(vec![
             Span::styled("  G        ", Style::default().fg(Color::Cyan)),
             Span::raw("Jump to last session"),
+        ]),
+        Line::from(vec![
+            Span::styled("  1-7      ", Style::default().fg(Color::Cyan)),
+            Span::raw("Sort by column (same key toggles ▲/▼)"),
         ]),
         Line::from(vec![
             Span::styled("  ?        ", Style::default().fg(Color::Cyan)),

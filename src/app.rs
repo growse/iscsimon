@@ -1,7 +1,8 @@
 use crate::iscsi::{Collector, Session};
-use crate::net::collect_tcp_connections;
+use crate::net::{collect_tcp_connections, resolve_hostname};
 use ratatui::widgets::TableState;
-use std::collections::HashSet;
+use std::cmp::Ordering;
+use std::collections::{HashMap, HashSet};
 
 pub struct App {
     pub sessions: Vec<Session>,
@@ -9,7 +10,11 @@ pub struct App {
     pub show_help: bool,
     pub error: Option<String>,
     pub source_ips: Vec<String>,
+    pub initiator_hostname: Option<String>,
+    pub sort_col: usize,
+    pub sort_asc: bool,
     collector: Collector,
+    hostname_cache: HashMap<String, String>,
 }
 
 impl App {
@@ -20,7 +25,11 @@ impl App {
             show_help: false,
             error: None,
             source_ips: Vec::new(),
+            initiator_hostname: None,
+            sort_col: 0,
+            sort_asc: true,
             collector: Collector::new(),
+            hostname_cache: HashMap::new(),
         }
     }
 
@@ -29,7 +38,6 @@ impl App {
             Ok(sessions) => {
                 self.sessions = sessions;
                 self.error = None;
-                // Clamp selection
                 let len = self.sessions.len();
                 if let Some(sel) = self.table_state.selected() {
                     if len == 0 {
@@ -56,45 +64,84 @@ impl App {
             }
             Err(_) => {}
         }
+
+        // Resolve hostnames for new IPs (cached)
+        for ip in &self.source_ips {
+            if !self.hostname_cache.contains_key(ip) {
+                if let Some(host) = resolve_hostname(ip) {
+                    self.hostname_cache.insert(ip.clone(), host);
+                }
+            }
+        }
+
+        // Single resolved hostname → use for Initiator column; multiple → fall back to IQN
+        let hostnames: HashSet<&str> = self
+            .source_ips
+            .iter()
+            .filter_map(|ip| self.hostname_cache.get(ip).map(String::as_str))
+            .collect();
+        self.initiator_hostname = if hostnames.len() == 1 {
+            hostnames.into_iter().next().map(str::to_string)
+        } else {
+            None
+        };
+
+        self.do_sort();
+    }
+
+    pub fn set_sort(&mut self, col: usize) {
+        if self.sort_col == col {
+            self.sort_asc = !self.sort_asc;
+        } else {
+            self.sort_col = col;
+            self.sort_asc = true;
+        }
+        self.do_sort();
+    }
+
+    fn do_sort(&mut self) {
+        let col = self.sort_col;
+        let asc = self.sort_asc;
+        self.sessions.sort_by(|a, b| {
+            let ord = match col {
+                0 => a.target_iqn.cmp(&b.target_iqn),
+                1 => a.initiator_iqn.cmp(&b.initiator_iqn),
+                2 => {
+                    let da = a.luns.first().map(|l| l.device.as_str()).unwrap_or("");
+                    let db = b.luns.first().map(|l| l.device.as_str()).unwrap_or("");
+                    da.cmp(db)
+                }
+                3 => a.read_rate.partial_cmp(&b.read_rate).unwrap_or(Ordering::Equal),
+                4 => a.write_rate.partial_cmp(&b.write_rate).unwrap_or(Ordering::Equal),
+                5 => a.total_read_mb.cmp(&b.total_read_mb),
+                6 => a.total_write_mb.cmp(&b.total_write_mb),
+                _ => Ordering::Equal,
+            };
+            if asc { ord } else { ord.reverse() }
+        });
     }
 
     pub fn select_next(&mut self) {
         let len = self.sessions.len();
-        if len == 0 {
-            return;
-        }
-        let next = self
-            .table_state
-            .selected()
-            .map(|i| (i + 1).min(len - 1))
-            .unwrap_or(0);
+        if len == 0 { return; }
+        let next = self.table_state.selected().map(|i| (i + 1).min(len - 1)).unwrap_or(0);
         self.table_state.select(Some(next));
     }
 
     pub fn select_prev(&mut self) {
         let len = self.sessions.len();
-        if len == 0 {
-            return;
-        }
-        let prev = self
-            .table_state
-            .selected()
-            .map(|i| i.saturating_sub(1))
-            .unwrap_or(0);
+        if len == 0 { return; }
+        let prev = self.table_state.selected().map(|i| i.saturating_sub(1)).unwrap_or(0);
         self.table_state.select(Some(prev));
     }
 
     pub fn select_first(&mut self) {
-        if !self.sessions.is_empty() {
-            self.table_state.select(Some(0));
-        }
+        if !self.sessions.is_empty() { self.table_state.select(Some(0)); }
     }
 
     pub fn select_last(&mut self) {
         let len = self.sessions.len();
-        if len > 0 {
-            self.table_state.select(Some(len - 1));
-        }
+        if len > 0 { self.table_state.select(Some(len - 1)); }
     }
 
     pub fn toggle_help(&mut self) {
