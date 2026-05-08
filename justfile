@@ -11,4 +11,4 @@ check:
     cargo clippy -- -D warnings
 
 deploy: build
-    scp target/release/iscsimon storebot:/tmp/iscsimon
+    scp target/release/iscsimon storebot:

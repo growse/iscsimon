@@ -87,11 +87,19 @@ fn draw_header(f: &mut Frame, app: &App, area: Rect) {
 }
 
 fn draw_table(f: &mut Frame, app: &mut App, area: Rect) {
-    let header_style = Style::default()
+    let header_normal = Style::default()
         .fg(Color::Yellow)
         .add_modifier(Modifier::BOLD);
-    let sort_style = Style::default()
+    let header_selected = Style::default()
+        .fg(Color::Black)
+        .bg(Color::Yellow)
+        .add_modifier(Modifier::BOLD);
+    let header_sorted = Style::default()
         .fg(Color::White)
+        .add_modifier(Modifier::BOLD);
+    let header_selected_sorted = Style::default()
+        .fg(Color::Black)
+        .bg(Color::White)
         .add_modifier(Modifier::BOLD);
     let selected_style = Style::default()
         .bg(Color::DarkGray)
@@ -99,16 +107,24 @@ fn draw_table(f: &mut Frame, app: &mut App, area: Rect) {
 
     let sort_col = app.sort_col;
     let sort_asc = app.sort_asc;
+    let sel_col = app.selected_col;
     let header_cells: Vec<Cell> = HEADER_TITLES
         .iter()
         .enumerate()
         .map(|(i, &h)| {
-            if i == sort_col {
-                let indicator = if sort_asc { " ▲" } else { " ▼" };
-                Cell::from(format!("{}{}", h, indicator)).style(sort_style)
+            let indicator = if i == sort_col {
+                if sort_asc { " ▲" } else { " ▼" }
             } else {
-                Cell::from(h).style(header_style)
-            }
+                ""
+            };
+            let text = format!("{}{}", h, indicator);
+            let style = match (i == sel_col, i == sort_col) {
+                (true, true)  => header_selected_sorted,
+                (true, false) => header_selected,
+                (false, true) => header_sorted,
+                (false, false) => header_normal,
+            };
+            Cell::from(text).style(style)
         })
         .collect();
     let header = Row::new(header_cells).height(1).bottom_margin(0);
@@ -160,8 +176,9 @@ fn draw_table(f: &mut Frame, app: &mut App, area: Rect) {
 fn draw_footer(f: &mut Frame, area: Rect) {
     let keys = vec![
         ("↑/↓", "navigate"),
+        ("←/→", "select column"),
+        ("s", "sort"),
         ("g/G", "top/bottom"),
-        ("1-7", "sort column"),
         ("?", "help"),
         ("q", "quit"),
     ];
@@ -206,8 +223,12 @@ fn draw_help(f: &mut Frame, area: Rect) {
             Span::raw("Jump to last session"),
         ]),
         Line::from(vec![
-            Span::styled("  1-7      ", Style::default().fg(Color::Cyan)),
-            Span::raw("Sort by column (same key toggles ▲/▼)"),
+            Span::styled("  ← / →    ", Style::default().fg(Color::Cyan)),
+            Span::raw("Select column"),
+        ]),
+        Line::from(vec![
+            Span::styled("  s        ", Style::default().fg(Color::Cyan)),
+            Span::raw("Sort by selected column (toggles ▲/▼)"),
         ]),
         Line::from(vec![
             Span::styled("  ?        ", Style::default().fg(Color::Cyan)),

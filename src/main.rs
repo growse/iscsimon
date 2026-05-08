@@ -80,11 +80,11 @@ fn run(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()> {
                     KeyCode::Char('?') => app.toggle_help(),
                     KeyCode::Down | KeyCode::Char('j') => app.select_next(),
                     KeyCode::Up | KeyCode::Char('k') => app.select_prev(),
+                    KeyCode::Right | KeyCode::Char('l') => app.col_next(),
+                    KeyCode::Left | KeyCode::Char('h') => app.col_prev(),
                     KeyCode::Char('g') => app.select_first(),
                     KeyCode::Char('G') => app.select_last(),
-                    KeyCode::Char(c) if ('1'..='7').contains(&c) => {
-                        app.set_sort(c as usize - '1' as usize);
-                    }
+                    KeyCode::Char('s') => app.set_sort(app.selected_col),
                     _ => {}
                 }
             }

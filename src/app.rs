@@ -4,6 +4,8 @@ use ratatui::widgets::TableState;
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 
+pub const NUM_COLS: usize = 7;
+
 pub struct App {
     pub sessions: Vec<Session>,
     pub table_state: TableState,
@@ -11,6 +13,7 @@ pub struct App {
     pub error: Option<String>,
     pub source_ips: Vec<String>,
     pub initiator_hostname: Option<String>,
+    pub selected_col: usize,
     pub sort_col: usize,
     pub sort_asc: bool,
     collector: Collector,
@@ -26,6 +29,7 @@ impl App {
             error: None,
             source_ips: Vec::new(),
             initiator_hostname: None,
+            selected_col: 0,
             sort_col: 0,
             sort_asc: true,
             collector: Collector::new(),
@@ -97,6 +101,14 @@ impl App {
             self.sort_asc = true;
         }
         self.do_sort();
+    }
+
+    pub fn col_next(&mut self) {
+        self.selected_col = (self.selected_col + 1).min(NUM_COLS - 1);
+    }
+
+    pub fn col_prev(&mut self) {
+        self.selected_col = self.selected_col.saturating_sub(1);
     }
 
     fn do_sort(&mut self) {
