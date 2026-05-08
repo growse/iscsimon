@@ -61,32 +61,32 @@ fn run(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()> {
             .checked_sub(last_tick.elapsed())
             .unwrap_or(Duration::ZERO);
 
-        if event::poll(timeout)? {
-            if let Event::Key(key) = event::read()? {
-                if key.kind != KeyEventKind::Press {
-                    continue;
+        if event::poll(timeout)?
+            && let Event::Key(key) = event::read()?
+        {
+            if key.kind != KeyEventKind::Press {
+                continue;
+            }
+            match key.code {
+                KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                    return Ok(());
                 }
-                match key.code {
-                    KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                KeyCode::Char('q') | KeyCode::Esc => {
+                    if app.show_help {
+                        app.toggle_help();
+                    } else {
                         return Ok(());
                     }
-                    KeyCode::Char('q') | KeyCode::Esc => {
-                        if app.show_help {
-                            app.toggle_help();
-                        } else {
-                            return Ok(());
-                        }
-                    }
-                    KeyCode::Char('?') => app.toggle_help(),
-                    KeyCode::Down | KeyCode::Char('j') => app.select_next(),
-                    KeyCode::Up | KeyCode::Char('k') => app.select_prev(),
-                    KeyCode::Right | KeyCode::Char('l') => app.col_next(),
-                    KeyCode::Left | KeyCode::Char('h') => app.col_prev(),
-                    KeyCode::Char('g') => app.select_first(),
-                    KeyCode::Char('G') => app.select_last(),
-                    KeyCode::Char('s') => app.set_sort(app.selected_col),
-                    _ => {}
                 }
+                KeyCode::Char('?') => app.toggle_help(),
+                KeyCode::Down | KeyCode::Char('j') => app.select_next(),
+                KeyCode::Up | KeyCode::Char('k') => app.select_prev(),
+                KeyCode::Right | KeyCode::Char('l') => app.col_next(),
+                KeyCode::Left | KeyCode::Char('h') => app.col_prev(),
+                KeyCode::Char('g') => app.select_first(),
+                KeyCode::Char('G') => app.select_last(),
+                KeyCode::Char('s') => app.set_sort(app.selected_col),
+                _ => {}
             }
         }
 

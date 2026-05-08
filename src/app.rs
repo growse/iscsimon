@@ -58,23 +58,20 @@ impl App {
             }
         }
 
-        match collect_tcp_connections() {
-            Ok(conns) => {
-                let ips: HashSet<String> =
-                    conns.iter().map(|c| c.peer_addr.clone()).collect();
-                let mut v: Vec<String> = ips.into_iter().collect();
-                v.sort();
-                self.source_ips = v;
-            }
-            Err(_) => {}
+        if let Ok(conns) = collect_tcp_connections() {
+            let ips: HashSet<String> =
+                conns.iter().map(|c| c.peer_addr.clone()).collect();
+            let mut v: Vec<String> = ips.into_iter().collect();
+            v.sort();
+            self.source_ips = v;
         }
 
         // Resolve hostnames for new IPs (cached)
         for ip in &self.source_ips {
-            if !self.hostname_cache.contains_key(ip) {
-                if let Some(host) = resolve_hostname(ip) {
-                    self.hostname_cache.insert(ip.clone(), host);
-                }
+            if !self.hostname_cache.contains_key(ip)
+                && let Some(host) = resolve_hostname(ip)
+            {
+                self.hostname_cache.insert(ip.clone(), host);
             }
         }
 

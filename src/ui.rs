@@ -142,7 +142,7 @@ fn draw_table(f: &mut Frame, app: &mut App, area: Rect) {
 
             let initiator = initiator_hostname
                 .as_deref()
-                .unwrap_or_else(|| s.initiator_iqn.as_str());
+                .unwrap_or(s.initiator_iqn.as_str());
 
             let cells = vec![
                 Cell::from(abbreviate_iqn(&s.target_iqn)),
@@ -174,7 +174,7 @@ fn draw_table(f: &mut Frame, app: &mut App, area: Rect) {
 }
 
 fn draw_footer(f: &mut Frame, area: Rect) {
-    let keys = vec![
+    let keys = [
         ("↑/↓", "navigate"),
         ("←/→", "select column"),
         ("s", "sort"),

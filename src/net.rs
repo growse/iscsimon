@@ -30,17 +30,17 @@ pub fn collect_tcp_connections() -> Result<Vec<TcpConnection>> {
             let mut bytes_sent = 0u64;
             let mut bytes_received = 0u64;
 
-            if let Some(stats_line) = lines.get(i + 1) {
-                if stats_line.starts_with('\t') || stats_line.starts_with(' ') {
-                    for token in stats_line.split_whitespace() {
-                        if let Some(v) = token.strip_prefix("bytes_sent:") {
-                            bytes_sent = v.parse().unwrap_or(0);
-                        } else if let Some(v) = token.strip_prefix("bytes_received:") {
-                            bytes_received = v.parse().unwrap_or(0);
-                        }
+            if let Some(stats_line) = lines.get(i + 1)
+                && (stats_line.starts_with('\t') || stats_line.starts_with(' '))
+            {
+                for token in stats_line.split_whitespace() {
+                    if let Some(v) = token.strip_prefix("bytes_sent:") {
+                        bytes_sent = v.parse().unwrap_or(0);
+                    } else if let Some(v) = token.strip_prefix("bytes_received:") {
+                        bytes_received = v.parse().unwrap_or(0);
                     }
-                    i += 1;
                 }
+                i += 1;
             }
 
             connections.push(TcpConnection { peer_addr, bytes_sent, bytes_received });
@@ -61,10 +61,10 @@ pub fn resolve_hostname(ip: &str) -> Option<String> {
 
 /// Strip port from an address: `[2001:db8::1]:12345` → `2001:db8::1`, `1.2.3.4:5678` → `1.2.3.4`.
 fn strip_port(addr: &str) -> String {
-    if addr.starts_with('[') {
-        if let Some(end) = addr.find(']') {
-            return addr[1..end].to_string();
-        }
+    if addr.starts_with('[')
+        && let Some(end) = addr.find(']')
+    {
+        return addr[1..end].to_string();
     }
     if let Some(colon) = addr.rfind(':') {
         return addr[..colon].to_string();
