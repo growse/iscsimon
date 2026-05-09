@@ -1,4 +1,5 @@
-default: build
+tasks:
+    just --list
 
 build:
     cargo build --release
