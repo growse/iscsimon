@@ -43,7 +43,11 @@ pub fn collect_tcp_connections() -> Result<Vec<TcpConnection>> {
                 i += 1;
             }
 
-            connections.push(TcpConnection { peer_addr, bytes_sent, bytes_received });
+            connections.push(TcpConnection {
+                peer_addr,
+                bytes_sent,
+                bytes_received,
+            });
         }
         i += 1;
     }
@@ -71,4 +75,3 @@ fn strip_port(addr: &str) -> String {
     }
     addr.to_string()
 }
-

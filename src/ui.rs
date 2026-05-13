@@ -4,9 +4,7 @@ use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{
-        Block, Borders, Cell, Clear, Paragraph, Row, Table,
-    },
+    widgets::{Block, Borders, Cell, Clear, Paragraph, Row, Table},
 };
 
 const HEADER_TITLES: [&str; 7] = [
@@ -119,7 +117,7 @@ fn draw_table(f: &mut Frame, app: &mut App, area: Rect) {
             };
             let text = format!("{}{}", h, indicator);
             let style = match (i == sel_col, i == sort_col) {
-                (true, true)  => header_selected_sorted,
+                (true, true) => header_selected_sorted,
                 (true, false) => header_selected,
                 (false, true) => header_sorted,
                 (false, false) => header_normal,
@@ -187,7 +185,12 @@ fn draw_footer(f: &mut Frame, area: Rect) {
         .iter()
         .flat_map(|(key, desc)| {
             vec![
-                Span::styled(*key, Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    *key,
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD),
+                ),
                 Span::styled(format!(" {} ", desc), Style::default().fg(Color::DarkGray)),
                 Span::styled("│", Style::default().fg(Color::DarkGray)),
                 Span::raw(" "),
@@ -203,7 +206,9 @@ fn draw_help(f: &mut Frame, area: Rect) {
     let help_text = vec![
         Line::from(Span::styled(
             " Keyboard Shortcuts ",
-            Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
         )),
         Line::from(""),
         Line::from(vec![

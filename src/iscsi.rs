@@ -64,10 +64,7 @@ impl Collector {
             let name = entry.file_name().to_string_lossy().to_string();
 
             // Skip non-IQN entries like cpus_allowed_list, discovery_auth, lio_version
-            if !name.starts_with("iqn.")
-                && !name.starts_with("eui.")
-                && !name.starts_with("naa.")
-            {
+            if !name.starts_with("iqn.") && !name.starts_with("eui.") && !name.starts_with("naa.") {
                 continue;
             }
 
@@ -104,7 +101,8 @@ impl Collector {
                 let initiator_iqn = initiators.join(", ");
                 let key = (target_iqn.clone(), initiator_iqn.clone());
 
-                let (read_rate, write_rate) = self.compute_rates(&key, total_read_mb, total_write_mb);
+                let (read_rate, write_rate) =
+                    self.compute_rates(&key, total_read_mb, total_write_mb);
 
                 sessions.push(Session {
                     target_iqn: target_iqn.clone(),
@@ -122,12 +120,7 @@ impl Collector {
         Ok(sessions)
     }
 
-    fn compute_rates(
-        &mut self,
-        key: &(String, String),
-        read_mb: u64,
-        write_mb: u64,
-    ) -> (f64, f64) {
+    fn compute_rates(&mut self, key: &(String, String), read_mb: u64, write_mb: u64) -> (f64, f64) {
         let now = Instant::now();
         if let Some(prev) = self.rate_cache.get(key) {
             let elapsed = now.duration_since(prev.instant).as_secs_f64();
@@ -143,13 +136,21 @@ impl Collector {
             };
             self.rate_cache.insert(
                 key.clone(),
-                RateState { read_mb, write_mb, instant: now },
+                RateState {
+                    read_mb,
+                    write_mb,
+                    instant: now,
+                },
             );
             (read_rate, write_rate)
         } else {
             self.rate_cache.insert(
                 key.clone(),
-                RateState { read_mb, write_mb, instant: now },
+                RateState {
+                    read_mb,
+                    write_mb,
+                    instant: now,
+                },
             );
             (0.0, 0.0)
         }
@@ -158,8 +159,7 @@ impl Collector {
 
 /// Read `dynamic_sessions` file, filtering null bytes, return non-empty IQNs.
 fn read_dynamic_sessions(path: &PathBuf) -> Result<Vec<String>> {
-    let raw = fs::read(path)
-        .with_context(|| format!("reading {}", path.display()))?;
+    let raw = fs::read(path).with_context(|| format!("reading {}", path.display()))?;
     let filtered: Vec<u8> = raw.into_iter().filter(|&b| b != 0).collect();
     let content = String::from_utf8_lossy(&filtered);
     Ok(content
@@ -199,7 +199,12 @@ fn collect_luns(tpgt_path: &Path) -> Result<Vec<Lun>> {
         let read_mb = read_u64_file(&stats_base.join("read_mbytes")).unwrap_or(0);
         let write_mb = read_u64_file(&stats_base.join("write_mbytes")).unwrap_or(0);
 
-        luns.push(Lun { index: idx, device, read_mb, write_mb });
+        luns.push(Lun {
+            index: idx,
+            device,
+            read_mb,
+            write_mb,
+        });
     }
 
     luns.sort_by_key(|l| l.index);

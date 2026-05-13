@@ -59,8 +59,7 @@ impl App {
         }
 
         if let Ok(conns) = collect_tcp_connections() {
-            let ips: HashSet<String> =
-                conns.iter().map(|c| c.peer_addr.clone()).collect();
+            let ips: HashSet<String> = conns.iter().map(|c| c.peer_addr.clone()).collect();
             let mut v: Vec<String> = ips.into_iter().collect();
             v.sort();
             self.source_ips = v;
@@ -120,8 +119,14 @@ impl App {
                     let db = b.luns.first().map(|l| l.device.as_str()).unwrap_or("");
                     da.cmp(db)
                 }
-                3 => a.read_rate.partial_cmp(&b.read_rate).unwrap_or(Ordering::Equal),
-                4 => a.write_rate.partial_cmp(&b.write_rate).unwrap_or(Ordering::Equal),
+                3 => a
+                    .read_rate
+                    .partial_cmp(&b.read_rate)
+                    .unwrap_or(Ordering::Equal),
+                4 => a
+                    .write_rate
+                    .partial_cmp(&b.write_rate)
+                    .unwrap_or(Ordering::Equal),
                 5 => a.total_read_mb.cmp(&b.total_read_mb),
                 6 => a.total_write_mb.cmp(&b.total_write_mb),
                 _ => Ordering::Equal,
@@ -132,25 +137,41 @@ impl App {
 
     pub fn select_next(&mut self) {
         let len = self.sessions.len();
-        if len == 0 { return; }
-        let next = self.table_state.selected().map(|i| (i + 1).min(len - 1)).unwrap_or(0);
+        if len == 0 {
+            return;
+        }
+        let next = self
+            .table_state
+            .selected()
+            .map(|i| (i + 1).min(len - 1))
+            .unwrap_or(0);
         self.table_state.select(Some(next));
     }
 
     pub fn select_prev(&mut self) {
         let len = self.sessions.len();
-        if len == 0 { return; }
-        let prev = self.table_state.selected().map(|i| i.saturating_sub(1)).unwrap_or(0);
+        if len == 0 {
+            return;
+        }
+        let prev = self
+            .table_state
+            .selected()
+            .map(|i| i.saturating_sub(1))
+            .unwrap_or(0);
         self.table_state.select(Some(prev));
     }
 
     pub fn select_first(&mut self) {
-        if !self.sessions.is_empty() { self.table_state.select(Some(0)); }
+        if !self.sessions.is_empty() {
+            self.table_state.select(Some(0));
+        }
     }
 
     pub fn select_last(&mut self) {
         let len = self.sessions.len();
-        if len > 0 { self.table_state.select(Some(len - 1)); }
+        if len > 0 {
+            self.table_state.select(Some(len - 1));
+        }
     }
 
     pub fn toggle_help(&mut self) {
