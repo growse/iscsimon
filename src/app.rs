@@ -16,6 +16,10 @@ pub struct App {
     pub selected_col: usize,
     pub sort_col: usize,
     pub sort_asc: bool,
+    pub filter: String,
+    pub filter_mode: bool,
+    filter_before_edit: String,
+    all_sessions: Vec<Session>,
     collector: Collector,
     hostname_cache: HashMap<String, String>,
 }
@@ -32,6 +36,10 @@ impl App {
             selected_col: 0,
             sort_col: 0,
             sort_asc: true,
+            filter: String::new(),
+            filter_mode: false,
+            filter_before_edit: String::new(),
+            all_sessions: Vec::new(),
             collector: Collector::new(),
             hostname_cache: HashMap::new(),
         }
@@ -40,18 +48,8 @@ impl App {
     pub fn refresh(&mut self) {
         match self.collector.collect() {
             Ok(sessions) => {
-                self.sessions = sessions;
+                self.all_sessions = sessions;
                 self.error = None;
-                let len = self.sessions.len();
-                if let Some(sel) = self.table_state.selected() {
-                    if len == 0 {
-                        self.table_state.select(None);
-                    } else if sel >= len {
-                        self.table_state.select(Some(len - 1));
-                    }
-                } else if len > 0 {
-                    self.table_state.select(Some(0));
-                }
             }
             Err(e) => {
                 self.error = Some(e.to_string());
@@ -86,6 +84,60 @@ impl App {
             None
         };
 
+        self.apply_filter();
+        self.do_sort();
+    }
+
+    fn apply_filter(&mut self) {
+        if self.filter.is_empty() {
+            self.sessions = self.all_sessions.clone();
+        } else {
+            let needle = self.filter.to_lowercase();
+            self.sessions = self
+                .all_sessions
+                .iter()
+                .filter(|s| session_matches(s, &needle))
+                .cloned()
+                .collect();
+        }
+
+        let len = self.sessions.len();
+        if let Some(sel) = self.table_state.selected() {
+            if len == 0 {
+                self.table_state.select(None);
+            } else if sel >= len {
+                self.table_state.select(Some(len - 1));
+            }
+        } else if len > 0 {
+            self.table_state.select(Some(0));
+        }
+    }
+
+    pub fn enter_filter_mode(&mut self) {
+        self.filter_before_edit = self.filter.clone();
+        self.filter_mode = true;
+    }
+
+    pub fn confirm_filter(&mut self) {
+        self.filter_mode = false;
+    }
+
+    pub fn cancel_filter(&mut self) {
+        self.filter_mode = false;
+        self.filter = self.filter_before_edit.clone();
+        self.apply_filter();
+        self.do_sort();
+    }
+
+    pub fn filter_push_char(&mut self, c: char) {
+        self.filter.push(c);
+        self.apply_filter();
+        self.do_sort();
+    }
+
+    pub fn filter_backspace(&mut self) {
+        self.filter.pop();
+        self.apply_filter();
         self.do_sort();
     }
 
@@ -177,4 +229,14 @@ impl App {
     pub fn toggle_help(&mut self) {
         self.show_help = !self.show_help;
     }
+}
+
+/// Case-insensitive substring match against target IQN, initiator IQN, and device paths.
+fn session_matches(session: &Session, needle: &str) -> bool {
+    session.target_iqn.to_lowercase().contains(needle)
+        || session.initiator_iqn.to_lowercase().contains(needle)
+        || session
+            .luns
+            .iter()
+            .any(|l| l.device.to_lowercase().contains(needle))
 }

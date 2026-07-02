@@ -40,7 +40,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 
     draw_header(f, app, chunks[0]);
     draw_table(f, app, chunks[1]);
-    draw_footer(f, chunks[2]);
+    draw_footer(f, app, chunks[2]);
 
     if app.show_help {
         draw_help(f, area);
@@ -60,12 +60,19 @@ fn draw_header(f: &mut Frame, app: &App, area: Rect) {
         app.source_ips.join(", ")
     };
 
+    let filter_suffix = if app.filter.is_empty() {
+        String::new()
+    } else {
+        format!(" — filter: '{}'", app.filter)
+    };
+
     let title = format!(
-        " iscsimon — {} session{} — {} — {} ",
+        " iscsimon — {} session{} — {} — {}{} ",
         session_count,
         if session_count == 1 { "" } else { "s" },
         ip_str,
-        now
+        now,
+        filter_suffix
     );
 
     let block = Block::default()
@@ -171,17 +178,44 @@ fn draw_table(f: &mut Frame, app: &mut App, area: Rect) {
     f.render_stateful_widget(table, area, &mut app.table_state);
 }
 
-fn draw_footer(f: &mut Frame, area: Rect) {
+fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
+    if app.filter_mode {
+        let line = Line::from(vec![
+            Span::styled(
+                " / ",
+                Style::default()
+                    .fg(Color::Black)
+                    .bg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::raw(format!(" {}", app.filter)),
+            Span::styled(
+                "▏",
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                "   Enter: apply   Esc: cancel",
+                Style::default().fg(Color::DarkGray),
+            ),
+        ]);
+        let para = Paragraph::new(line).alignment(Alignment::Left);
+        f.render_widget(para, area);
+        return;
+    }
+
     let keys = [
         ("↑/↓", "navigate"),
         ("←/→", "select column"),
         ("s", "sort"),
         ("g/G", "top/bottom"),
+        ("/", "filter"),
         ("?", "help"),
         ("q", "quit"),
     ];
 
-    let spans: Vec<Span> = keys
+    let mut spans: Vec<Span> = keys
         .iter()
         .flat_map(|(key, desc)| {
             vec![
@@ -197,6 +231,16 @@ fn draw_footer(f: &mut Frame, area: Rect) {
             ]
         })
         .collect();
+
+    if !app.filter.is_empty() {
+        spans.push(Span::styled(
+            format!("filter: '{}'", app.filter),
+            Style::default()
+                .fg(Color::Black)
+                .bg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        ));
+    }
 
     let para = Paragraph::new(Line::from(spans)).alignment(Alignment::Center);
     f.render_widget(para, area);
@@ -234,6 +278,10 @@ fn draw_help(f: &mut Frame, area: Rect) {
         Line::from(vec![
             Span::styled("  s        ", Style::default().fg(Color::Cyan)),
             Span::raw("Sort by selected column (toggles ▲/▼)"),
+        ]),
+        Line::from(vec![
+            Span::styled("  /        ", Style::default().fg(Color::Cyan)),
+            Span::raw("Filter sessions (IQN / device, live)"),
         ]),
         Line::from(vec![
             Span::styled("  ?        ", Style::default().fg(Color::Cyan)),

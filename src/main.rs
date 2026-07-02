@@ -65,10 +65,22 @@ fn run(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()> {
             if key.kind != KeyEventKind::Press {
                 continue;
             }
-            match key.code {
-                KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                    return Ok(());
+            if key.code == KeyCode::Char('c') && key.modifiers.contains(KeyModifiers::CONTROL) {
+                return Ok(());
+            }
+
+            if app.filter_mode {
+                match key.code {
+                    KeyCode::Enter => app.confirm_filter(),
+                    KeyCode::Esc => app.cancel_filter(),
+                    KeyCode::Backspace => app.filter_backspace(),
+                    KeyCode::Char(c) => app.filter_push_char(c),
+                    _ => {}
                 }
+                continue;
+            }
+
+            match key.code {
                 KeyCode::Char('q') | KeyCode::Esc => {
                     if app.show_help {
                         app.toggle_help();
@@ -77,6 +89,7 @@ fn run(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()> {
                     }
                 }
                 KeyCode::Char('?') => app.toggle_help(),
+                KeyCode::Char('/') => app.enter_filter_mode(),
                 KeyCode::Down | KeyCode::Char('j') => app.select_next(),
                 KeyCode::Up | KeyCode::Char('k') => app.select_prev(),
                 KeyCode::Right | KeyCode::Char('l') => app.col_next(),
